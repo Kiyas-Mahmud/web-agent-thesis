@@ -1,0 +1,12 @@
+{
+  "total_steps": 7775,
+  "clean_steps": 3117,
+  "augmented_steps": 4658,
+  "failure_counts": {
+    "WRONG_OPERATION": 1072,
+    "NO_STATE_CHANGE": 761,
+    "TARGET_MISSING": 1458,
+    "MISCLICK": 1048,
+    "LOOP": 319
+  }
+}

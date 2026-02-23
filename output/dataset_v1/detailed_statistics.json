@@ -1,0 +1,34 @@
+{
+  "overview": {
+    "total_trajectories": 1009,
+    "total_steps": 7775,
+    "clean_steps": 3117,
+    "augmented_steps": 4658,
+    "augmentation_rate": "59.9%"
+  },
+  "action_types": {
+    "CLICK": 6513,
+    "TYPE": 936,
+    "SELECT": 326
+  },
+  "failure_types": {
+    "WRONG_OPERATION": 1072,
+    "NO_STATE_CHANGE": 761,
+    "TARGET_MISSING": 1458,
+    "MISCLICK": 1048,
+    "LOOP": 319
+  },
+  "coordinates": {
+    "with_coords": 7362,
+    "without_coords": 413,
+    "percentage": "94.7%"
+  },
+  "images": {
+    "total_files": 14226,
+    "task_folders": 1009,
+    "expected": 15550,
+    "missing": 1324,
+    "success_rate": "91.5%",
+    "steps_with_both": 7775
+  }
+}
