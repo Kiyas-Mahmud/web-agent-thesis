@@ -1,0 +1,91 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+logs/
+*.log
+
+# Cache
+.cache/
+*.cache
+
+# Dataset (large files)
+dataset/images/*
+dataset/records/*
+dataset/splits/*
+!dataset/images/.gitkeep
+!dataset/records/.gitkeep
+!dataset/splits/.gitkeep
+
+# Raw downloaded HuggingFace datasets (large, re-downloadable)
+dataset/mind2web_offline/
+dataset/test_domain/
+dataset/test_task/
+dataset/test_website/
+dataset/mind2web_subset/
+dataset/replays/
+dataset/dryrun/
+dataset/test_run/
+dataset/augmented_test/
+dataset/metrics/
+
+# Generated output (multi-GB datasets + zips)
+output/
+test_output/
+
+# Virtual environments (.venv variants)
+.venv/
+.venv-1/
+.venv-2/
+
+# Agent / tooling caches
+.agents/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+.env

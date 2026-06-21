@@ -1,0 +1,121 @@
+# Default Configuration for Data Collection System
+
+# Task Loader Configuration
+task_loader:
+  sources:
+    - wave-ui
+    - mind2web
+    - visual-webarena
+  cache_dir: .cache
+  random_seed: 42
+  task_limit: 1000 # Maximum tasks to load (null for all)
+
+# Browser Configuration
+browser:
+  type: playwright # playwright or selenium
+  headless: true
+  viewport:
+    width: 1280
+    height: 720
+  timeout: 30000 # milliseconds
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+  locale: en-US
+
+# Screenshot Configuration
+screenshots:
+  format: png
+  quality: 95
+  naming_scheme: "{state}_{step_id:04d}.png" # before_0001.png, after_0001.png
+
+# State Capture Configuration
+state_capture:
+  wait_for_stability: true
+  stability_timeout: 5000 # milliseconds
+  max_wait_attempts: 3
+
+# Metric Computation Configuration
+metrics:
+  visual_diff:
+    threshold_no_change: 0.05
+    threshold_major_change: 0.30
+  ssim:
+    threshold_similar: 0.95
+    threshold_different: 0.70
+  perceptual_hash:
+    threshold_similar: 5
+    threshold_different: 15
+  loop_detection:
+    max_state_history: 20
+    loop_threshold: 3 # Same state appears 3+ times
+
+# Failure Detection Configuration
+failure_detection:
+  enable_visual_diff: true
+  enable_loop_detection: true
+  enable_exception_capture: true
+  enable_timeout_detection: true
+  confidence_threshold: 0.7
+
+# Recovery Configuration
+recovery:
+  enable_recovery: true
+  max_retry_attempts: 3
+  retry_backoff_ms: 1000
+  max_backtrack_steps: 5
+  max_alternative_candidates: 5
+  max_replan_attempts: 2
+  recovery_timeout_ms: 30000
+
+# Storage Configuration
+storage:
+  dataset_root: dataset
+  images_dir: dataset/images
+  records_dir: dataset/records
+  splits_dir: dataset/splits
+  compression: false # Enable compression for images
+
+# Monitoring Configuration
+monitoring:
+  enable_logging: true
+  log_level: INFO # DEBUG, INFO, WARNING, ERROR
+  log_dir: logs
+  enable_metrics: true
+  metrics_interval: 10 # seconds
+  enable_dashboard: false
+  dashboard_port: 5000
+
+# Dataset Targets
+targets:
+  mvd:
+    tasks: 500
+    steps: 30000
+    failure_rate_min: 0.30
+    failure_rate_max: 0.40
+    recovery_attempt_rate: 0.50
+    domains: 20
+    long_horizon_ratio: 0.30
+
+  q1:
+    tasks: 1000
+    steps: 100000
+    failure_rate_min: 0.40
+    failure_rate_max: 0.50
+    recovery_attempt_rate: 0.60
+    domains: 30
+
+# Orchestration Configuration
+orchestration:
+  parallel_workers: 3
+  worker_isolation: true
+  restart_on_failure: true
+  max_task_duration: 600 # seconds
+  checkpoint_interval: 10 # Save every 10 steps
+
+# Alert Configuration
+alerts:
+  enable_alerts: false
+  failure_rate_high: 0.60
+  failure_rate_low: 0.20
+  recovery_rate_low: 0.30
+  storage_warning: 0.80
+  error_rate_high: 0.10

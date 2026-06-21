@@ -1,0 +1,240 @@
+"""
+═══════════════════════════════════════════════════════════════════════════
+                    DATA QUALITY FIX PLAN & TODO LIST
+═══════════════════════════════════════════════════════════════════════════
+
+CURRENT STATUS: ❌ NOT READY FOR FINAL COLLECTION
+
+Problems Identified:
+  ❌ 9.1% chrome error pages (should be < 2%)
+  ❌ 40% SUCCESS steps have no state change (invalid)
+  ❌ 69.7% labeled perception_error (overused, should be mixed)
+  ❌ 0% recovery execution tracked (missing implementation)
+
+═══════════════════════════════════════════════════════════════════════════
+                              MASTER PLAN
+═══════════════════════════════════════════════════════════════════════════
+
+PHASE 1: Add Missing Schema Fields (2-3 hours)
+├── Add page health tracking fields
+├── Add failure subtype classification
+└── Add recovery execution tracking
+
+PHASE 2: Fix Classification Logic (3-4 hours)
+├── Implement page status detection
+├── Fix NAVIGATE success criteria
+├── Reclassify chrome-error as TOOL_FAILURE
+└── Add failure subtype rules
+
+PHASE 3: Implement Recovery Execution (2-3 hours)
+├── Add recovery attempt detection
+├── Track recovery step spans
+└── Measure recovery success
+
+PHASE 4: Quality Gates & Validation (1-2 hours)
+├── Run 50-task pilot collection
+├── Verify quality metrics
+└── Approve for final collection
+
+═══════════════════════════════════════════════════════════════════════════
+                           DETAILED TODO LIST
+═══════════════════════════════════════════════════════════════════════════
+
+━━━ PHASE 1: Schema Extensions ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TODO-01: Add Page Health Fields
+  File: src/browser_recorder/browser_recorder.py
+  Action: Extend step result dict with:
+    - page_status: LOADED | ERROR_PAGE | TIMEOUT | REDIRECT_LOOP
+    - http_status: int (200, 404, 500, etc.)
+    - dom_ready_state: complete | interactive | loading
+    - navigation_error: string (error message if any)
+    - is_error_page: bool (chrome-error://, about:blank, etc.)
+  
+TODO-02: Add Failure Subtype Field
+  File: src/failure_labeling/decision_tree.py
+  Action: Extend FailureClassification dataclass:
+    - failure_subtype: string (PAGE_NOT_LOADED, TIMEOUT, DNS, CAPTCHA, ...)
+  Update: All _is_* functions to return subtype
+  
+TODO-03: Add Recovery Execution Fields
+  File: src/collection_runner/collect_runner.py (recovery annotation)
+  Action: Extend recovery tracking with:
+    - recovery_attempted: bool
+    - recovery_method: string (RETRY | ALTERNATIVE | BACKTRACK | ...)
+    - recovery_step_span: [start_step, end_step]
+    - recovery_success: bool
+    - recovery_duration_ms: float
+
+━━━ PHASE 2: Fix Classification Logic ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TODO-04: Implement Page Status Detection
+  File: src/browser_recorder/session_manager.py
+  Action: After navigation, check:
+    - If URL contains chrome-error:// → page_status = ERROR_PAGE
+    - If timeout → page_status = TIMEOUT
+    - If DOM ready & no errors → page_status = LOADED
+    - If redirect loop → page_status = REDIRECT_LOOP
+  Return page_status with navigation result
+
+TODO-05: Fix NAVIGATE Success Criteria
+  File: src/browser_recorder/browser_recorder.py (record_navigate)
+  Action: Mark NAVIGATE as success=True ONLY if:
+    - page_status == LOADED
+    - final URL is not error scheme
+    - http_status in [200, 201, 301, 302, 304] (successful/redirect)
+  Otherwise: success=False
+
+TODO-06: Reclassify Chrome Error Steps
+  File: src/failure_labeling/decision_tree.py
+  Action: In classify_step(), add FIRST check (before perception):
+    - If step.result.is_error_page == True:
+        return FailureClassification(
+          failure_type="tool_failure",
+          failure_subtype="PAGE_NOT_LOADED",
+          execution_outcome="FAILURE",
+          ...
+        )
+
+TODO-07: Add Failure Subtype Rules
+  File: src/failure_labeling/decision_tree.py
+  Action: Update each _is_* function:
+  
+  _is_tool_error():
+    - Chrome error → subtype = PAGE_NOT_LOADED
+    - Timeout error → subtype = TIMEOUT
+    - Network error → subtype = NETWORK_FAILURE
+    
+  _is_perception_error():
+    - Element not found + page loaded → subtype = ELEMENT_MISSING
+    - Wrong selector → subtype = SELECTOR_ERROR
+    - Element not found + page error → RETURN FALSE (not perception!)
+    
+  _is_state_no_change():
+    - No change + chrome error → RETURN FALSE (tool failure, not this)
+    - No change + valid page → subtype = NO_VISUAL_RESPONSE
+
+TODO-08: Reorder Classification Checks
+  File: src/failure_labeling/decision_tree.py (classify_step)
+  Action: New order:
+    1. Check is_error_page (chrome-error) → TOOL_FAILURE
+    2. Check tool errors (timeout, network)
+    3. Check perception errors (only if page loaded!)
+    4. Check state changes
+    5. Check loops
+    6. Check action mismatch
+    ... rest
+
+━━━ PHASE 3: Recovery Execution Tracking ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TODO-09: Detect Recovery Attempts
+  File: src/collection_runner/collect_runner.py (_annotate_recovery)
+  Action: After a failure step, check next 1-3 steps:
+    - If same action_type repeated → recovery_method = RETRY
+    - If different target selector → recovery_method = ALTERNATIVE_TARGET
+    - If previous step action → recovery_method = BACKTRACK
+    - If wait action → recovery_method = WAIT_AND_RETRY
+
+TODO-10: Track Recovery Spans
+  File: src/collection_runner/collect_runner.py (_annotate_recovery)
+  Action: For each failure step:
+    - Mark recovery_attempted = True if next step tries to recover
+    - Set recovery_step_span = [failure_step_id, last_recovery_step_id]
+    - Track recovery_duration_ms = sum of recovery step times
+
+TODO-11: Measure Recovery Success
+  File: src/collection_runner/collect_runner.py (_annotate_recovery)
+  Action: Check if recovery succeeded:
+    - If any step in recovery_span has success=True → recovery_success=True
+    - If all recovery steps fail → recovery_success=False
+    - If no recovery attempted → recovery_success=None
+
+━━━ PHASE 4: Quality Validation ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TODO-12: Implement Quality Gate Checks
+  File: _quality_gates.py (new file)
+  Action: Create automated quality checks:
+  
+  Gate A - Error Page Rate
+    - error_page_rate = % steps with is_error_page=True
+    - PASS if < 2%
+    
+  Gate B - Success Consistency
+    - For each SUCCESS step:
+      - Check pixel_diff > 0.01 OR url_changed OR dom_hash_changed
+    - PASS if > 95% consistent
+    
+  Gate C - Failure Type Distribution
+    - UNKNOWN + mislabeled should be < 10%
+    - perception_error should be < 50% (not 70%!)
+    - Should see tool_failure, state_no_change, loop_detected, etc.
+    - PASS if distribution is balanced
+
+TODO-13: Run 50-Task Pilot
+  Action: Clean start + run:
+    python src/collection_runner/collect_runner.py \
+      --source mind2web --limit 50 --output-dir dataset/pilot \
+      --timeout 15000
+  Then: python _quality_gates.py dataset/pilot/collected/
+
+TODO-14: Verify Quality Metrics
+  Action: Check pilot results:
+    - Error page rate < 2% ✓
+    - SUCCESS consistency > 95% ✓
+    - Failure distribution balanced ✓
+    - Recovery execution tracked ✓
+  If all pass → approve for final 200-task collection
+
+TODO-15: Final 200-Task Collection
+  Action: Only if TODO-14 passes:
+    python src/collection_runner/collect_runner.py \
+      --source mind2web --limit 200 --output-dir dataset/final \
+      --timeout 15000
+
+═══════════════════════════════════════════════════════════════════════════
+                          IMPLEMENTATION ORDER
+═══════════════════════════════════════════════════════════════════════════
+
+Priority 1 (Critical - Do First):
+  ✓ TODO-04: Page status detection
+  ✓ TODO-05: Fix NAVIGATE success
+  ✓ TODO-06: Reclassify chrome-error
+
+Priority 2 (Important - Do Second):
+  ✓ TODO-01: Add page health fields
+  ✓ TODO-02: Add failure subtype
+  ✓ TODO-07: Failure subtype rules
+  ✓ TODO-08: Reorder checks
+
+Priority 3 (Enhancement - Do Third):
+  ✓ TODO-03: Recovery execution schema
+  ✓ TODO-09: Detect recovery attempts
+  ✓ TODO-10: Track recovery spans
+  ✓ TODO-11: Measure recovery success
+
+Priority 4 (Validation - Do Last):
+  ✓ TODO-12: Quality gates
+  ✓ TODO-13: 50-task pilot
+  ✓ TODO-14: Verify metrics
+  ✓ TODO-15: Final collection
+
+═══════════════════════════════════════════════════════════════════════════
+                        ESTIMATED TIMELINE
+═══════════════════════════════════════════════════════════════════════════
+
+Phase 1: 2-3 hours (schema extensions)
+Phase 2: 3-4 hours (classification logic)
+Phase 3: 2-3 hours (recovery tracking)
+Phase 4: 1-2 hours (validation)
+
+Total: 8-12 hours of implementation + testing
+
+═══════════════════════════════════════════════════════════════════════════
+                           NEXT IMMEDIATE ACTION
+═══════════════════════════════════════════════════════════════════════════
+
+START WITH: TODO-04 (Page Status Detection)
+This is the root cause fix that will cascade into everything else.
+
+"""
+print(__doc__)

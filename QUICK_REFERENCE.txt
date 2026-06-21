@@ -1,0 +1,94 @@
+"""
+QUICK REFERENCE: Data Quality Issues & Fixes
+═══════════════════════════════════════════════════════════════════════════
+
+CRITICAL PROBLEMS FOUND IN 10-TASK PILOT:
+
+1. ❌ Chrome Error Pages (9.1% of steps)
+   Problem: Pages stuck on chrome-error://chromewebdata/
+   Impact: Not real web interactions, invalid data
+   Fix: Add page_status field + reclassify as TOOL_FAILURE
+
+2. ❌ Invalid SUCCESS Labels (40% of success steps)
+   Problem: NAVIGATE marked SUCCESS on error pages
+   Impact: Training data teaches wrong success criteria
+   Fix: Require page_status=LOADED + state change for SUCCESS
+
+3. ❌ Overused perception_error (69.7% of all steps)
+   Problem: All selector timeouts → perception_error
+   Impact: Missing tool_failure, ui_variation, reasoning_error
+   Fix: Add failure_subtype + check page_status before classifying
+
+4. ❌ Missing Recovery Execution (0% tracked)
+   Problem: Only strategy defined, never executed/measured
+   Impact: Can't train recovery policy
+   Fix: Add recovery_attempted, recovery_success, step_span tracking
+
+═══════════════════════════════════════════════════════════════════════════
+REQUIRED NEW FIELDS:
+
+Page Health:
+  • page_status: LOADED | ERROR_PAGE | TIMEOUT | REDIRECT_LOOP
+  • http_status: int (200, 404, 500, etc.)
+  • dom_ready_state: complete | interactive | loading
+  • navigation_error: string
+  • is_error_page: bool
+
+Failure Classification:
+  • failure_subtype: string
+    - PAGE_NOT_LOADED, TIMEOUT, DNS, CAPTCHA (for tool_failure)
+    - ELEMENT_MISSING, SELECTOR_ERROR (for perception_error)
+    - NO_VISUAL_RESPONSE (for state_no_change)
+
+Recovery Execution:
+  • recovery_attempted: bool
+  • recovery_method: RETRY | ALTERNATIVE | BACKTRACK | WAIT
+  • recovery_step_span: [start, end]
+  • recovery_success: bool
+  • recovery_duration_ms: float
+
+═══════════════════════════════════════════════════════════════════════════
+QUALITY GATES BEFORE FINAL COLLECTION:
+
+Gate A: Error Page Rate < 2%
+  Current: 9.1% ❌
+  Target: < 2%
+
+Gate B: SUCCESS Consistency > 95%
+  Current: 60% ❌ (40% have no state change)
+  Target: > 95%
+
+Gate C: Failure Distribution Balanced
+  Current: 69.7% perception_error (overused) ❌
+  Target: Mixed (tool_failure, perception, state, loop, etc.)
+
+═══════════════════════════════════════════════════════════════════════════
+IMPLEMENTATION PRIORITY:
+
+🔴 DO FIRST (breaks everything if not fixed):
+  □ TODO-04: Page status detection
+  □ TODO-05: Fix NAVIGATE success
+  □ TODO-06: Reclassify chrome-error
+
+🟡 DO SECOND (critical for quality):
+  □ TODO-01: Add page health fields
+  □ TODO-02: Add failure subtype
+  □ TODO-07: Failure subtype rules
+  □ TODO-08: Reorder classification
+
+🟢 DO THIRD (dataset completeness):
+  □ TODO-03: Recovery schema
+  □ TODO-09: Detect recovery
+  □ TODO-10: Track spans
+  □ TODO-11: Measure success
+
+🔵 DO LAST (validation):
+  □ TODO-12: Quality gates script
+  □ TODO-13: 50-task pilot
+  □ TODO-14: Verify metrics
+  □ TODO-15: Final 200-task
+
+═══════════════════════════════════════════════════════════════════════════
+"""
+
+print(__doc__)
