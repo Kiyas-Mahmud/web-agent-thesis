@@ -18,6 +18,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--audit-file", default="output/gold_dataset/gold_audit.jsonl")
     parser.add_argument("--output-dir", default="output/gold_dataset")
     parser.add_argument("--approved-only", action="store_true")
+    parser.add_argument("--preserve-ids", action="store_true")
+    parser.add_argument("--include-source-domain", action="store_true")
     parser.add_argument("--seed", type=int, default=42)
     return parser.parse_args()
 
@@ -30,6 +32,8 @@ def main() -> int:
             output_dir=args.output_dir,
             approved_only=args.approved_only,
             seed=args.seed,
+            anonymize_ids=not args.preserve_ids,
+            include_source_domain=args.include_source_domain,
         )
     ).export()
     print(json.dumps(summary, indent=2, ensure_ascii=False))

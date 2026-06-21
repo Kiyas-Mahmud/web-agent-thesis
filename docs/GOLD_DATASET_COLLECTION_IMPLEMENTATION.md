@@ -9,6 +9,26 @@ Build a leakage-safe gold evaluation dataset for the thesis model.
 - Timeline target: **2-3 weeks** for collection and validation after the collector is stable.
 - Existing `output/dataset_70k_safe` remains useful for synthetic pretraining/debugging, but final visual-failure claims must be evaluated on this gold dataset.
 
+## Current Decision - 2026-06-22
+
+The synthetic 70k data is **not acceptable as final thesis gold data** because simple metadata rules can recover labels. It remains useful only for pipeline development and optional pretraining.
+
+The cleanest current real-browser seed is:
+
+- `logs/gold_tasks_final_v3_balanced.jsonl`
+- Output: `output/gold_dataset_final_v3_balanced`
+- Size: 32 tasks / 32 collected steps / 64 screenshots
+- Label balance: 16 `SUCCESS`, 16 `FAILURE`
+- Failure labels: 16 `NONE`, 16 `PERCEPTION_ERROR`
+- Seed audit: passed
+- Dataset validation: passed
+- Export leakage audit: passed
+- Image integrity: 64 PNG files, 1280x720, no blank-like images
+
+This v3 dataset is a **valid protocol check and seed**, not the final publishable dataset. It proves the automatic collection/export/audit path now works without the earlier obvious text leakage.
+
+To become thesis-grade, the next dataset must scale this same balanced design to at least 2,000 real collected samples, include 300-500 manually reviewed samples, and add real-agent `ACTION_MISMATCH` / `LOOP_DETECTED` cases from observed agent executions rather than synthetic injection metadata.
+
 ## Why This Is Needed
 
 The current synthetic 70k dataset is mechanically trainable, but outcome and failure labels are deterministic from synthetic metadata. A model can solve those labels without using screenshots. The gold dataset must therefore use observed browser behavior and must export training files without leaked fields.
@@ -77,6 +97,10 @@ These fields may appear in `gold_audit.jsonl`, but must not appear in model-trai
   - Creates model-safe split files.
 - `scripts/validate_gold_dataset.py`
   - Validates audit and exported splits.
+- `scripts/audit_gold_task_seed.py`
+  - Checks ActionLog seed files before collection for one-sided task/action text shortcuts.
+- `scripts/audit_gold_leakage.py`
+  - Checks exported model splits for explicit keyword leakage, pure failure tokens, and text-only shortcut baselines.
 - `scripts/build_gold_review.py`
   - Creates review artifacts.
 
@@ -125,7 +149,18 @@ python scripts/validate_gold_dataset.py
 - No duplicate `sample_id`.
 - No task overlap between train/val/test exports.
 - Exported split files contain no forbidden fields.
+- Every repeated model-visible task/action phrase has both success and failure examples before collection.
+- Text-only leakage baselines must stay near chance and must not reach strong MCC on validation/test splits.
 - Unknown or unmapped fine labels remain below 10% after manual review.
 - Actions outside `CLICK`/`TYPE`/`SELECT` are masked for action-head loss/metrics.
 - Metadata-only baseline should not solve the gold test set perfectly.
 - Final thesis results must report gold-test performance separately from synthetic-pretraining performance.
+
+## Next Milestones
+
+1. Manually review the 32-row v3 pilot in `output/gold_dataset_final_v3_balanced/review/review.html`.
+2. Expand the v3 task template to 300-500 balanced tasks across more domains and intents.
+3. Run `scripts/audit_gold_task_seed.py` before every collection batch.
+4. Collect a 300-500 sample pilot, then export, validate, and run `scripts/audit_gold_leakage.py`.
+5. Add real agent-run data for `ACTION_MISMATCH` and `LOOP_DETECTED`.
+6. Scale to 2,000+ samples only after the pilot passes structure, image, manual-review, and leakage checks.

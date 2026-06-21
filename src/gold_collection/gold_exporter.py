@@ -21,6 +21,8 @@ class GoldExportConfig:
     test_ratio: float = 0.20
     seed: int = 42
     approved_only: bool = False
+    anonymize_ids: bool = True
+    include_source_domain: bool = False
 
 
 class GoldExporter:
@@ -63,6 +65,10 @@ class GoldExporter:
             by_task[step.task_id].append(step)
 
         task_ids = sorted(by_task)
+        task_aliases = {
+            task_id: f"gold_task_{idx:06d}"
+            for idx, task_id in enumerate(task_ids, start=1)
+        }
         rng = random.Random(self.config.seed)
         rng.shuffle(task_ids)
 
@@ -78,7 +84,16 @@ class GoldExporter:
         split_rows = {"train": [], "val": [], "test": []}
         for split_name, ids in split_tasks.items():
             for task_id in sorted(ids):
-                split_rows[split_name].extend(step.model_record() for step in by_task[task_id])
+                for step in by_task[task_id]:
+                    row = step.model_record()
+                    if self.config.anonymize_ids:
+                        task_alias = task_aliases[task_id]
+                        row["task_id"] = task_alias
+                        row["sample_id"] = f"{task_alias}__step_{step.step_index:04d}"
+                    if not self.config.include_source_domain:
+                        row.pop("source", None)
+                        row.pop("website_domain", None)
+                    split_rows[split_name].append(row)
         return split_rows
 
     def _assert_no_forbidden_fields(self, rows: Iterable[Dict[str, Any]]) -> None:
