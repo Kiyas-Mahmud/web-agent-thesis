@@ -1,4 +1,4 @@
-# Gold Dataset V8 Reproduction Handoff
+﻿# Gold Dataset V8 Reproduction Handoff
 
 This note records how the current thesis gold dataset was made, what files/folders were touched, and how another agent should continue or recreate the work.
 
@@ -14,7 +14,7 @@ Do not treat the old synthetic 70k dataset as final Q1/A* evidence. It is only f
 Approved dataset folder:
 
 ```text
-G:\thesis_gold\gold_dataset_final_v8_agent_2107_clean_recoveryfix
+G:\thesis_gold\web_agent_gold_v8_approved_2032_real_browser
 ```
 
 This is the current approved 2,032-sample real-browser gold baseline.
@@ -48,19 +48,19 @@ review_status=approved
 The approved review page is:
 
 ```text
-G:\thesis_gold\gold_dataset_final_v8_agent_2107_clean_recoveryfix\review\review.html
+G:\thesis_gold\web_agent_gold_v8_approved_2032_real_browser\review\review.html
 ```
 
 Backup before approval:
 
 ```text
-G:\thesis_gold\gold_dataset_final_v8_agent_2107_clean_recoveryfix\gold_audit.before_approval_20260623_005637.jsonl
+G:\thesis_gold\web_agent_gold_v8_approved_2032_real_browser\gold_audit.before_approval_20260623_005637.jsonl
 ```
 
 Backup before the recovery-label fix:
 
 ```text
-G:\thesis_gold\gold_dataset_final_v8_agent_2107_clean_recoveryfix\gold_audit.before_recoveryfix.jsonl
+G:\thesis_gold\web_agent_gold_v8_approved_2032_real_browser\gold_audit.before_recoveryfix.jsonl
 ```
 
 ## Why V8 Exists
@@ -147,7 +147,7 @@ G:\thesis_gold\gold_dataset_final_v8_agent_2107_retry_missing
 G:\thesis_gold\gold_dataset_final_v8_agent_2107_retry2_remaining
 G:\thesis_gold\gold_dataset_final_v8_agent_2107_combined
 G:\thesis_gold\gold_dataset_final_v8_agent_2107_clean
-G:\thesis_gold\gold_dataset_final_v8_agent_2107_clean_recoveryfix
+G:\thesis_gold\web_agent_gold_v8_approved_2032_real_browser
 ```
 
 Do not store large collected image/replay folders inside the repo.
@@ -302,7 +302,7 @@ Then a recovery-label issue was found in manual review.
 Corrected and approved output:
 
 ```text
-G:\thesis_gold\gold_dataset_final_v8_agent_2107_clean_recoveryfix
+G:\thesis_gold\web_agent_gold_v8_approved_2032_real_browser
 ```
 
 ## Recovery BACKTRACK Fix
@@ -406,16 +406,16 @@ Export:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\export_gold_for_training.py `
-  --audit-file G:\thesis_gold\gold_dataset_final_v8_agent_2107_clean_recoveryfix\gold_audit.jsonl `
-  --output-dir G:\thesis_gold\gold_dataset_final_v8_agent_2107_clean_recoveryfix
+  --audit-file G:\thesis_gold\web_agent_gold_v8_approved_2032_real_browser\gold_audit.jsonl `
+  --output-dir G:\thesis_gold\web_agent_gold_v8_approved_2032_real_browser
 ```
 
 For the final approved export, always use `--approved-only`:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\export_gold_for_training.py `
-  --audit-file G:\thesis_gold\gold_dataset_final_v8_agent_2107_clean_recoveryfix\gold_audit.jsonl `
-  --output-dir G:\thesis_gold\gold_dataset_final_v8_agent_2107_clean_recoveryfix `
+  --audit-file G:\thesis_gold\web_agent_gold_v8_approved_2032_real_browser\gold_audit.jsonl `
+  --output-dir G:\thesis_gold\web_agent_gold_v8_approved_2032_real_browser `
   --approved-only
 ```
 
@@ -423,30 +423,30 @@ Validate:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\validate_gold_dataset.py `
-  --base-dir G:\thesis_gold\gold_dataset_final_v8_agent_2107_clean_recoveryfix `
-  --audit-file G:\thesis_gold\gold_dataset_final_v8_agent_2107_clean_recoveryfix\gold_audit.jsonl
+  --base-dir G:\thesis_gold\web_agent_gold_v8_approved_2032_real_browser `
+  --audit-file G:\thesis_gold\web_agent_gold_v8_approved_2032_real_browser\gold_audit.jsonl
 ```
 
 Leakage audit:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\audit_gold_leakage.py `
-  --base-dir G:\thesis_gold\gold_dataset_final_v8_agent_2107_clean_recoveryfix
+  --base-dir G:\thesis_gold\web_agent_gold_v8_approved_2032_real_browser
 ```
 
 Image check:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\check_gold_images.py `
-  --base-dir G:\thesis_gold\gold_dataset_final_v8_agent_2107_clean_recoveryfix
+  --base-dir G:\thesis_gold\web_agent_gold_v8_approved_2032_real_browser
 ```
 
 Build review:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\build_gold_review.py `
-  --audit-file G:\thesis_gold\gold_dataset_final_v8_agent_2107_clean_recoveryfix\gold_audit.jsonl `
-  --output-dir G:\thesis_gold\gold_dataset_final_v8_agent_2107_clean_recoveryfix\review `
+  --audit-file G:\thesis_gold\web_agent_gold_v8_approved_2032_real_browser\gold_audit.jsonl `
+  --output-dir G:\thesis_gold\web_agent_gold_v8_approved_2032_real_browser\review `
   --limit 2500
 ```
 
@@ -455,7 +455,7 @@ Build review:
 Open the review HTML and check the before/after screenshots:
 
 ```text
-G:\thesis_gold\gold_dataset_final_v8_agent_2107_clean_recoveryfix\review\review.html
+G:\thesis_gold\web_agent_gold_v8_approved_2032_real_browser\review\review.html
 ```
 
 Review each row for:
@@ -619,7 +619,7 @@ when the agent repeats without progress.
 Start from:
 
 ```text
-G:\thesis_gold\gold_dataset_final_v8_agent_2107_clean_recoveryfix
+G:\thesis_gold\web_agent_gold_v8_approved_2032_real_browser
 ```
 
 Treat it as:
@@ -634,3 +634,4 @@ Then either:
 2. Create the next larger seed and collect a new scale batch under a new `G:\thesis_gold\...` folder.
 
 Do not overwrite the approved v8 folder. Create a new folder for each new run.
+
