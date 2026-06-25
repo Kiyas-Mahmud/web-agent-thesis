@@ -36,9 +36,9 @@ def load_jsonl(path: Path) -> list[dict[str, Any]]:
     return rows
 
 
-def expected_label(row: dict[str, Any]) -> str:
-    value = str((row.get("metadata") or {}).get("expected_behavior", "")).lower()
-    if value == "success":
+def expected_label(value: Any) -> str:
+    value = str(value or "").lower()
+    if value in {"success", "none"}:
         return "SUCCESS"
     if value:
         return "FAILURE"
@@ -50,8 +50,36 @@ def first_action(row: dict[str, Any]) -> dict[str, Any]:
     return actions[0] if actions and isinstance(actions[0], dict) else {}
 
 
+def expected_for_step(row: dict[str, Any], step_index: int) -> Any:
+    metadata = row.get("metadata") or {}
+    values = metadata.get("expected_step_behaviors")
+    if isinstance(values, list) and step_index < len(values):
+        return values[step_index]
+    return metadata.get("expected_behavior")
+
+
+def iter_seed_steps(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    expanded = []
+    for row in rows:
+        actions = row.get("actions") or []
+        for step_index, action in enumerate(actions):
+            if not isinstance(action, dict):
+                continue
+            expanded.append(
+                {
+                    "task_id": row.get("task_id"),
+                    "task_description": row.get("task_description"),
+                    "domain": (row.get("metadata") or {}).get("domain", ""),
+                    "intent": (row.get("metadata") or {}).get("intent", ""),
+                    "expected": expected_for_step(row, step_index),
+                    "action": action,
+                }
+            )
+    return expanded
+
+
 def model_visible_text(row: dict[str, Any]) -> str:
-    action = first_action(row)
+    action = row["action"]
     return " ".join(
         str(value or "")
         for value in (
@@ -69,7 +97,7 @@ def group_counts(
 ) -> dict[str, Counter[str]]:
     counts: dict[str, Counter[str]] = defaultdict(Counter)
     for row in rows:
-        counts[str(key_fn(row))][expected_label(row)] += 1
+        counts[str(key_fn(row))][expected_label(row.get("expected"))] += 1
     return dict(counts)
 
 
@@ -95,22 +123,26 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    rows = load_jsonl(args.log_file)
+    task_rows = load_jsonl(args.log_file)
+    rows = iter_seed_steps(task_rows)
     blockers: list[str] = []
 
     print("Seed")
     print(f"  file: {args.log_file}")
-    print(f"  tasks: {len(rows)}")
+    print(f"  tasks: {len(task_rows)}")
+    print(f"  steps: {len(rows)}")
 
-    labels = Counter(expected_label(row) for row in rows)
+    labels = Counter(expected_label(row.get("expected")) for row in rows)
+    fine = Counter(str(row.get("expected") or "UNKNOWN") for row in rows)
     print("Labels")
     print(f"  expected: {dict(labels.most_common())}")
+    print(f"  fine_expected: {dict(fine.most_common())}")
     if labels.get("UNKNOWN"):
         blockers.append("some rows are missing metadata.expected_behavior")
     if not labels.get("SUCCESS") or not labels.get("FAILURE"):
         blockers.append("seed must contain both success and failure examples")
 
-    action_types = Counter(str(first_action(row).get("action_type") or "") for row in rows)
+    action_types = Counter(str(row["action"].get("action_type") or "") for row in rows)
     print("Actions")
     print(f"  action_type: {dict(action_types.most_common())}")
 
@@ -126,7 +158,12 @@ def main() -> int:
 
     print_group_report(
         "Intent Balance",
-        group_counts(rows, "intent", lambda row: (row.get("metadata") or {}).get("intent", "")),
+        group_counts(rows, "intent", lambda row: row.get("intent", "")),
+        blockers,
+    )
+    print_group_report(
+        "Domain Balance",
+        group_counts(rows, "domain", lambda row: row.get("domain", "")),
         blockers,
     )
     print_group_report(
@@ -139,15 +176,15 @@ def main() -> int:
         group_counts(
             rows,
             "action_text",
-            lambda row: first_action(row).get("description")
-            or first_action(row).get("target")
+            lambda row: row["action"].get("description")
+            or row["action"].get("target")
             or "",
         ),
         blockers,
     )
     print_group_report(
         "Action Type Balance",
-        group_counts(rows, "action_type", lambda row: first_action(row).get("action_type", "")),
+        group_counts(rows, "action_type", lambda row: row["action"].get("action_type", "")),
         blockers,
     )
 

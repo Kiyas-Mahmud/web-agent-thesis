@@ -141,8 +141,16 @@ class GoldCollector:
                 step["metrics"] = metrics
 
             fine_failure = self._derive_fine_failure(step, annotated_history, task_description)
+            expected_failure = self._expected_fine_failure(log, index)
+            label_source = "auto"
+            if self._can_apply_controlled_label(expected_failure, fine_failure, result, metrics):
+                fine_failure = expected_failure
+                label_source = "controlled_observed"
             outcome = "SUCCESS" if fine_failure == "none" else "FAILURE"
             recovery_strategy = self._recovery_for_failure(fine_failure)
+            label_reason = self._auto_label_reason(step, fine_failure)
+            if label_source == "controlled_observed":
+                label_reason = self._controlled_label_reason(expected_failure, metrics)
 
             gold_step = build_gold_step(
                 task_id=task_id,
@@ -168,8 +176,10 @@ class GoldCollector:
                 recovery_strategy_observed=recovery_strategy,
                 recovery_attempted=False,
                 recovery_success_observed=None,
+                label_source=label_source,
                 metadata={
-                    "auto_label_reason": self._auto_label_reason(step, fine_failure),
+                    "auto_label_reason": label_reason,
+                    "expected_fine_failure": expected_failure,
                     "signals": (step.get("failure") or {}).get("signals_fired", []),
                 },
             )
@@ -223,6 +233,60 @@ class GoldCollector:
                 return "unknown"
 
         return "none"
+
+    def _expected_fine_failure(self, log: ActionLog, step_index: int) -> str:
+        metadata = log.metadata or {}
+        raw_values = metadata.get("expected_step_behaviors")
+        if isinstance(raw_values, list) and step_index < len(raw_values):
+            value = raw_values[step_index]
+        else:
+            value = metadata.get("expected_behavior")
+
+        token = str(value or "success").strip().lower().replace("-", "_").replace(" ", "_")
+        mapping = {
+            "success": "none",
+            "none": "none",
+            "perception_error": "perception_error",
+            "action_mismatch": "action_mismatch",
+            "loop_detected": "loop_detected",
+        }
+        return mapping.get(token, "none")
+
+    def _can_apply_controlled_label(
+        self,
+        expected_failure: str,
+        auto_failure: str,
+        result: Dict[str, Any],
+        metrics: Dict[str, Any],
+    ) -> bool:
+        if expected_failure not in {"action_mismatch", "loop_detected"}:
+            return False
+        if auto_failure != "none" or result.get("success") is not True:
+            return False
+        if expected_failure == "loop_detected":
+            return self._is_no_change(metrics)
+        return True
+
+    def _is_no_change(self, metrics: Dict[str, Any]) -> bool:
+        visual = metrics.get("visual") or {}
+        pixel_diff = visual.get("pixel_diff_score")
+        ssim = visual.get("ssim_score")
+        pixel_ok = pixel_diff is None or float(pixel_diff) <= self.config.no_change_pixel_threshold
+        ssim_ok = ssim is None or float(ssim) >= self.config.no_change_ssim_threshold
+        return pixel_ok and ssim_ok
+
+    def _controlled_label_reason(self, expected_failure: str, metrics: Dict[str, Any]) -> str:
+        visual = metrics.get("visual") or {}
+        if expected_failure == "action_mismatch":
+            return (
+                "Controlled observed label: browser action succeeded, but the executed "
+                "target intentionally does not match the task goal."
+            )
+        return (
+            "Controlled observed label: repeated action succeeded with no meaningful "
+            f"state change (pixel_diff={visual.get('pixel_diff_score')}, "
+            f"ssim={visual.get('ssim_score')})."
+        )
 
     def _recovery_for_failure(self, fine_failure: str) -> str:
         mapping = {

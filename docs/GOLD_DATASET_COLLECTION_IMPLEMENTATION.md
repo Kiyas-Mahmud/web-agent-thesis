@@ -29,6 +29,36 @@ This v3 dataset is a **valid protocol check and seed**, not the final publishabl
 
 To become thesis-grade, the next dataset must scale this same balanced design to at least 2,000 real collected samples, include 300-500 manually reviewed samples, and add real-agent `ACTION_MISMATCH` / `LOOP_DETECTED` cases from observed agent executions rather than synthetic injection metadata.
 
+## Local v4 Scale-Up Pilot - 2026-06-22
+
+Local output:
+
+- `output/gold_dataset_final_v4_local_300`
+- Seed: `config/gold_tasks_final_v4_local_300.jsonl`
+- Generator: `scripts/generate_gold_v4_seed.py`
+
+Result after replacing one transient arXiv Chrome-error recollection:
+
+- 320 tasks / 384 collected steps.
+- 768 screenshots.
+- `SUCCESS`: 203
+- `FAILURE`: 181
+- `NONE`: 203
+- `PERCEPTION_ERROR`: 64
+- `ACTION_MISMATCH`: 64
+- `LOOP_DETECTED`: 53
+- Missing images: 0
+- Bad/blank/tiny images: 0
+- Split task overlap: 0
+- Forbidden fields in exported splits: 0
+- Text leakage audit: passed.
+- Image check: passed.
+- Visual-diff same-data diagnostic: about 0.81 accuracy, much lower than v3 but still a baseline that must be reported.
+
+Interpretation:
+
+This v4 local dataset is a **valid 300-500 scale pilot** and is suitable for manual review and pipeline experiments. It is still not the final thesis gold dataset because the controlled `ACTION_MISMATCH` and `LOOP_DETECTED` labels must be manually reviewed and later strengthened with real agent-run failures.
+
 ## Why This Is Needed
 
 The current synthetic 70k dataset is mechanically trainable, but outcome and failure labels are deterministic from synthetic metadata. A model can solve those labels without using screenshots. The gold dataset must therefore use observed browser behavior and must export training files without leaked fields.

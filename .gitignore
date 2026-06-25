@@ -74,6 +74,10 @@ test_output/
 thesis_gold/
 gold_dataset_final_*/
 
+# Collected gold dataset exports (large data blobs)
+web_agent_gold_*/
+web_agent_gold_*.zip
+
 # Virtual environments (.venv variants)
 .venv/
 .venv-1/

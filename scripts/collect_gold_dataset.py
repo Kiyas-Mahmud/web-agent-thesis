@@ -17,6 +17,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Collect leakage-safe gold data.")
     parser.add_argument("--log-file", type=Path, required=True, help="JSON/JSONL ActionLog file.")
     parser.add_argument("--output-dir", default="output/gold_dataset")
+    parser.add_argument("--offset", type=int, default=0)
     parser.add_argument("--limit", type=int, default=2000)
     parser.add_argument("--no-headless", action="store_true")
     parser.add_argument("--timeout-ms", type=int, default=30_000)
@@ -27,7 +28,9 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    logs = LogParser().load_file(args.log_file)[: args.limit]
+    all_logs = LogParser().load_file(args.log_file)
+    logs = all_logs[args.offset : args.offset + args.limit]
+    print(f"Loaded {len(all_logs)} tasks; collecting offset={args.offset}, count={len(logs)}")
     collector = GoldCollector(
         GoldCollectionConfig(
             output_dir=args.output_dir,
