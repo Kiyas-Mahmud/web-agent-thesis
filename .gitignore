@@ -71,6 +71,8 @@ dataset/metrics/
 # Generated output (multi-GB datasets + zips)
 output/
 test_output/
+thesis_gold/
+gold_dataset_final_*/
 
 # Virtual environments (.venv variants)
 .venv/
